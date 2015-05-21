@@ -12,11 +12,14 @@
 //
 //p5.soundFormats('mp3');
 //var soundFile = p5.loadSound('sound.mp3');
+var numBins = 1024;
+var lineWidth = 1; // should include margins
+
 var soundLoaded = false;
 new p5.SoundFile('sound.mp3', function(soundFile) {
     soundLoaded = true;
     soundFile.loop();
-    fft = new p5.FFT(null, 32);
+    fft = new p5.FFT(null, numBins); // first arg is smoothing
     fft.setInput(soundFile);
     window.soundFile = soundFile;
 });
@@ -43,8 +46,6 @@ document.body.appendChild( renderer.domElement );
 var geometry = new THREE.BoxGeometry( .5, .5, .5 );
 
 
-var numBins = 16;
-
 
 var insertCubes = function(xPosition) {
     var material = new THREE.MeshBasicMaterial( { color: '#'+Math.floor(Math.random()*16777215).toString(16), wireframe: true} );
@@ -70,12 +71,38 @@ var normalizedBPM = d3.scale.linear()
     .domain([0, 200])
     .range([0, 1]);
 
+var y = d3.scale.linear()
+    .domain([0, 255])
+    .range([0, 100]);
+    //.range([0, numBins]);
+
 var timeSincePeak = 0;
 var peakTimes = [];
 var bpm = 80;
 
 var cubesList = [];
 var rotationsList = [];
+
+var lines = [];
+
+var renderline = function(points) {
+    var material = new THREE.LineBasicMaterial({
+        color: 0x0000ff
+    });
+
+    var geometry = new THREE.Geometry();
+
+    console.log(d3.max(points));
+    points.forEach(function(point, i) {
+        geometry.vertices.push(
+            new t.Vector3(i, point, 0)
+        );
+    });
+
+    var line = new THREE.Line( geometry, material );
+    lines.push(line);
+    scene.add( line );
+}
 
 function render() {
     requestAnimationFrame(render);
@@ -85,6 +112,22 @@ function render() {
     }
 
     var spectrum = fft.analyze();
+    var scaledSpectrum = spectrum.map(function(amplitude) {
+        return y(amplitude);
+    });
+
+    lines.forEach(function(points, i) {
+        //debugger;
+        points.position.y -= lineWidth;
+        //points.forEach(function(point, j) {
+            //point.position.x += lineWidth;
+        //});
+    });
+
+    renderline(scaledSpectrum);
+
+    renderer.render(scene,camera);
+    return;
 
     var peakEnergy = fft.getEnergy(100, 250);
     if (peakEnergy < 250) {
@@ -138,8 +181,6 @@ function render() {
         //// Rotation for lower frequencies is boring
         //cubes[i].rotation.x += rotation(spectrum[i]);
     //}
-
-    renderer.render(scene,camera);
 }
 
 render();
