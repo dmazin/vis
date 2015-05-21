@@ -87,7 +87,7 @@ var lastLines = [];
 
 var renderline = function(points, other, last) {
     var material = new THREE.LineBasicMaterial({
-        color: 0x0000ff
+        color: '#'+Math.floor(Math.random()*16777215).toString(16)
     });
 
     var geometry = new THREE.Geometry();
