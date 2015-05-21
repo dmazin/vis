@@ -13,7 +13,7 @@
 //p5.soundFormats('mp3');
 //var soundFile = p5.loadSound('sound.mp3');
 var numBins = 1024;
-var lineWidth = 1; // should include margins
+var lineWidth = .5; // should include margins
 
 var soundLoaded = false;
 new p5.SoundFile('sound.mp3', function(soundFile) {
@@ -37,66 +37,79 @@ var t = THREE;
 var clock = new THREE.Clock();
 
 var scene = new t.Scene();
-var camera = new t.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+var camera = new THREE.PerspectiveCamera( 50, window.innerWidth / window.innerHeight, 1, 1000 );
+camera.position.x = 100;
+camera.position.y = 100;
+camera.position.z = 200;
+camera.lookAt(scene.position);
+
 
 var renderer = new t.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 
-var geometry = new THREE.BoxGeometry( .5, .5, .5 );
 
+//camera.position.z = 100;
+//camera.rotation.y = 3.14 / 2;
+//camera.position.x = 7;
 
-
-var insertCubes = function(xPosition) {
-    var material = new THREE.MeshBasicMaterial( { color: '#'+Math.floor(Math.random()*16777215).toString(16), wireframe: true} );
-    var cubes = [];
-    for (var i=0; i < numBins; i++) {
-        var cube = new THREE.Mesh( geometry, material );
-        scene.add(cube);
-        cube.position.set(i, xPosition, 0);
-        cubes.push(cube);
-    }
-    return cubes;
-}
-
-camera.position.z = 10;
-camera.position.x = 7;
-camera.rotation.z = 3.14  / 2;
-
-var rotation = d3.scale.linear()
+var scaledEnergy = d3.scale.linear()
     .domain([0, 255])
-    .range([0, .2]);
-
-var normalizedBPM = d3.scale.linear()
-    .domain([0, 200])
-    .range([0, 1]);
-
-var y = d3.scale.linear()
-    .domain([0, 255])
-    .range([0, 100]);
+    .range([0, 50]);
     //.range([0, numBins]);
+
+var scaledFrequency = d3.scale.linear()
+    .domain([0, 1023])
+    .range([0, 500]);
 
 var timeSincePeak = 0;
 var peakTimes = [];
 var bpm = 80;
 
-var cubesList = [];
-var rotationsList = [];
-
 var lines = [];
+var otherLines = [];
+var lastLines = [];
 
-var renderline = function(points) {
+///
+				geometry = new THREE.PlaneGeometry(1000, 50);
+				material = new THREE.MeshBasicMaterial({color:0x888888});
+				mesh = new THREE.Mesh(geometry, material);
+				//mesh.rotation.x = -Math.PI/2;
+				scene.add(mesh);
+
+				geometry = new THREE.PlaneGeometry(1000, 50);
+				material = new THREE.MeshBasicMaterial({color:0x888888});
+				mesh = new THREE.Mesh(geometry, material);
+                mesh.rotation.z = -Math.PI/2;
+				scene.add(mesh);
+//
+//
+//
+
+var renderline = function(points, other, last) {
     var material = new THREE.LineBasicMaterial({
         color: 0x0000ff
     });
 
     var geometry = new THREE.Geometry();
 
-    console.log(d3.max(points));
-    points.forEach(function(point, i) {
-        geometry.vertices.push(
-            new t.Vector3(i, point, 0)
-        );
+    points.forEach(function(energy, frequency) {
+        if (other) {
+            geometry.vertices.push(
+                //new t.Vector3(0, scaledEnergy(energy), scaledFrequency(frequency))
+                new t.Vector3(scaledEnergy(energy), 0, scaledFrequency(frequency))
+            );
+        } else if (last) {
+            geometry.vertices.push(
+                //new t.Vector3(0, scaledEnergy(energy), scaledFrequency(frequency))
+                new t.Vector3(0, scaledEnergy(energy), scaledFrequency(frequency))
+            );
+        } else {
+            geometry.vertices.push(
+                //new t.Vector3(0, scaledFrequency(frequency), scaledEnergy(energy))
+                new t.Vector3(0, scaledEnergy(energy), scaledFrequency(frequency))
+            );
+        }
     });
 
     var line = new THREE.Line( geometry, material );
@@ -113,18 +126,27 @@ function render() {
 
     var spectrum = fft.analyze();
     var scaledSpectrum = spectrum.map(function(amplitude) {
-        return y(amplitude);
+        return scaledEnergy(amplitude);
     });
 
-    lines.forEach(function(points, i) {
-        //debugger;
-        points.position.y -= lineWidth;
-        //points.forEach(function(point, j) {
-            //point.position.x += lineWidth;
-        //});
+    lines.forEach(function(line, i) {
+        line.position.x += lineWidth;
+        console.log(line.position.x);
+    });
+
+    //debugger;
+
+    otherLines.forEach(function(points, i) {
+        points.position.x -= lineWidth;
+    });
+
+    lastLines.forEach(function(points, i) {
+        points.position.y += lineWidth;
     });
 
     renderline(scaledSpectrum);
+    //renderline(scaledSpectrum, true);
+    //renderline(scaledSpectrum, null, true);
 
     renderer.render(scene,camera);
     return;
@@ -133,60 +155,12 @@ function render() {
     if (peakEnergy < 250) {
         timeSincePeak += clock.getDelta();
     } else if (timeSincePeak > 0) {
-        cubesList.forEach(function(cubes) {
-            shiftCubes(cubes);
-        });
-
-        cubesList.push(insertCubes(10));
-
-        var spectrumSlice = spectrum.slice(0, 16);
-        var rotations = spectrumSlice.map(function(amplitude) {
-            return rotation(amplitude);
-        });
-        rotationsList.push(rotations);
-
         peakTimes.push(timeSincePeak);
         bpm = 60 / d3.median(peakTimes) / 2;
 
         timeSincePeak = 0;
     }
 
-    cubesList.forEach(function(cubes, i) {
-        cubes.forEach(function(cube, j) {
-            cube.rotation.x += rotationsList[i][j];
-            cube.rotation.y += 3.14 / 100;
-        });
-    });
-
-    //console.log(spectrum[0]);
-    //return;
-    //cube.rotation.x += 0.1;
-    //cube.rotation.y += 0.1;
-
-    //var micLevel = mic.getLevel(1);
-    //micLevel = 1;
-    //console.log(micLevel);
-
-    //cube.rotation.x += micLevel;
-    //camera.position.z = 100 * micLevel;
-    //for (var i=0; i<cubes.length; i++){
-        //console.log(Math.sin(clock.getElapsedTime()));
-        //cubes[i].position.y = Math.sin(clock.getElapsedTime()  + i) / 10;
-        //cubes[i].position.y = Math.sin(clock.getElapsedTime()  + i) /4 ;
-    //}
-        //console.log(micLevel);
-        //
-
-    //for (var i=0; i<numBins; i++) {
-        //// Rotation for lower frequencies is boring
-        //cubes[i].rotation.x += rotation(spectrum[i]);
-    //}
 }
 
 render();
-
-var shiftCubes = function(cubes) {
-    for (var i=0; i<cubes.length; i++){
-        cubes[i].position.y -= cubeWidth + 1;
-    }
-}
