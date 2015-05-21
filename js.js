@@ -88,8 +88,7 @@ function render() {
 
         for (var i=0; i<cubes.length; i++){
             //console.log(Math.sin(clock.getElapsedTime()));
-            cubes[i].position.y = Math.sin(clock.getElapsedTime()  + i);
-            //cubes[i].rotation.z += .25;
+            cubes[i].rotation.z += .25;
         }
         //camera.rotation.y += .1;
         timeSincePeak = 0;
@@ -109,6 +108,7 @@ function render() {
     //camera.position.z = 100 * micLevel;
     for (var i=0; i<cubes.length; i++){
         //console.log(Math.sin(clock.getElapsedTime()));
+        cubes[i].position.y = Math.sin(clock.getElapsedTime()  + i) / 10;
         //cubes[i].position.y = Math.sin(clock.getElapsedTime()  + i) /4 ;
     }
         //console.log(micLevel);
