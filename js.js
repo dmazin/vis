@@ -13,7 +13,7 @@
 //p5.soundFormats('mp3');
 //var soundFile = p5.loadSound('sound.mp3');
 var numBins = 1024;
-var lineWidth = .5; // should include margins
+var lineWidth = 2; // should include margins
 
 var soundLoaded = false;
 new p5.SoundFile('sound.mp3', function(soundFile) {
@@ -30,7 +30,6 @@ new p5.SoundFile('sound.mp3', function(soundFile) {
 //fft.setInput(mic);
 //fft.setInput(mic);
 //
-var cubeWidth = .5;
 
 var t = THREE;
 
@@ -55,12 +54,12 @@ document.body.appendChild( renderer.domElement );
 
 var scaledEnergy = d3.scale.linear()
     .domain([0, 255])
-    .range([0, 50]);
+    .range([0, 100]);
     //.range([0, numBins]);
 
 var scaledFrequency = d3.scale.linear()
     .domain([0, 1023])
-    .range([0, 500]);
+    .range([0, 150]);
 
 var timeSincePeak = 0;
 var peakTimes = [];
@@ -130,7 +129,7 @@ function render() {
     });
 
     lines.forEach(function(line, i) {
-        line.position.x += lineWidth;
+        line.position.x -= lineWidth;
         console.log(line.position.x);
     });
 
